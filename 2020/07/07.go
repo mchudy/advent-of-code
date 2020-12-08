@@ -32,12 +32,17 @@ type Edge struct {
 
 // Node -
 type Node struct {
-	key     string
-	parents []Edge
+	key      string
+	parents  []Edge
+	children []Edge
 }
 
 func (node *Node) addParent(edge Edge) {
 	node.parents = append(node.parents, edge)
+}
+
+func (node *Node) addChild(edge Edge) {
+	node.children = append(node.children, edge)
 }
 
 func getKey(shade string, color string) string {
@@ -71,6 +76,7 @@ func parseRules(ruleDefinitions []string) map[string]*Node {
 				childNode := getNode(childKey, nodes)
 
 				childNode.addParent(Edge{weight: amount, nodeKey: parentBagNode.key})
+				parentBagNode.addChild(Edge{weight: amount, nodeKey: childKey})
 			}
 		}
 	}
@@ -81,17 +87,36 @@ func parseRules(ruleDefinitions []string) map[string]*Node {
 func findParentBags(graph map[string]*Node, bagKey string) int {
 	root := graph[bagKey]
 	visited := map[string]bool{}
-	traverse(graph, root, visited, 0)
+	traverseParentBags(graph, root, visited)
 	return len(visited) - 1
 }
 
-func traverse(graph map[string]*Node, node *Node, visited map[string]bool, depth int) {
+func traverseParentBags(graph map[string]*Node, node *Node, visited map[string]bool) {
 	visited[node.key] = true
 
 	for i := 0; i < len(node.parents); i++ {
 		parent := node.parents[i]
-		traverse(graph, graph[parent.nodeKey], visited, depth+1)
+		traverseParentBags(graph, graph[parent.nodeKey], visited)
 	}
+}
+
+func countChildrenBags(graph map[string]*Node, rootKey string) int {
+	return traverseChildrenBags(graph, graph[rootKey]) - 1
+}
+
+func traverseChildrenBags(graph map[string]*Node, node *Node) int {
+	if len(node.children) == 0 {
+		return 1
+	}
+
+	count := 1
+	for i := 0; i < len(node.children); i++ {
+		child := node.children[i]
+		childBags := traverseChildrenBags(graph, graph[child.nodeKey])
+		count += child.weight * childBags
+	}
+
+	return count
 }
 
 func main() {
@@ -99,4 +124,6 @@ func main() {
 	rules := parseRules(lines)
 	targetBagKey := "shiny gold"
 	println(findParentBags(rules, targetBagKey))
+
+	println(countChildrenBags(rules, targetBagKey))
 }
