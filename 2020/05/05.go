@@ -57,6 +57,22 @@ func findEmptySeat(allIDs []int) int {
 	return -1
 }
 
+func readLines(path string) []string {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	return lines
+}
+
 func main() {
 	lines := readLines("05.txt")
 	maxSeatID := 0
@@ -73,20 +89,4 @@ func main() {
 
 	emptySeat := findEmptySeat(allIDs)
 	println("my seat", emptySeat)
-}
-
-func readLines(path string) []string {
-	file, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	return lines
 }
