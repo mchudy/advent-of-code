@@ -16,7 +16,7 @@ const (
 	// Tree : tree
 	Tree SquareType = true
 	// OpenSquare : open square
-	OpenSquare = false
+	OpenSquare SquareType = false
 )
 
 const treeChar = '#'
