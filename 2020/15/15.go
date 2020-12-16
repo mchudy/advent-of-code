@@ -24,7 +24,7 @@ func readLines(path string) []string {
 	return lines
 }
 
-func part1(numbers []int) int {
+func getNthNumber(numbers []int, n int) int {
 	lastSpoken := map[int]int{}
 
 	for i := 0; i < len(numbers)-1; i++ {
@@ -34,7 +34,7 @@ func part1(numbers []int) int {
 	previousNumber := numbers[len(numbers)-1]
 	currentNumber := numbers[len(numbers)-1]
 
-	for i := len(numbers); i < 30000000; i++ {
+	for i := len(numbers); i < n; i++ {
 		previousSpoken, ok := lastSpoken[currentNumber]
 		if !ok {
 			previousNumber = currentNumber
@@ -52,8 +52,12 @@ func part1(numbers []int) int {
 	return currentNumber
 }
 
+func part1(numbers []int) int {
+	return getNthNumber(numbers, 2020)
+}
+
 func part2(numbers []int) int {
-	return 0
+	return getNthNumber(numbers, 30000000)
 }
 
 func main() {
