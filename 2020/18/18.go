@@ -30,11 +30,11 @@ type TokenType int
 
 // -
 const (
-	Plus       TokenType = 0
-	LeftParen  TokenType = 1
-	RightParen TokenType = 2
-	Multiply   TokenType = 3
-	Number     TokenType = 4
+	Plus TokenType = iota
+	LeftParen
+	RightParen
+	Multiply
+	Number
 )
 
 // Token -
@@ -43,38 +43,23 @@ type Token struct {
 	value     string
 }
 
-// Stack -
-type Stack []Token
-
-func (s *Stack) isEmpty() bool {
-	return len(*s) == 0
-}
-
-func (s *Stack) push(token Token) {
-	*s = append(*s, token)
-}
-
-func (s *Stack) pop() Token {
-	element := (*s)[len(*s)-1]
-	*s = (*s)[:len(*s)-1]
-	return element
+var tokenRegexMap = map[TokenType]string{
+	Plus:       "^\\+",
+	LeftParen:  "^\\(",
+	RightParen: "^\\)",
+	Multiply:   "^\\*",
+	Number:     "^\\d+",
 }
 
 func tokenize(expression string) []Token {
-	tokenMap := map[TokenType]string{
-		Plus:       "^\\+",
-		LeftParen:  "^\\(",
-		RightParen: "^\\)",
-		Multiply:   "^\\*",
-		Number:     "^\\d+",
-	}
-
 	tokens := make([]Token, 0)
 	remainingExpression := strings.ReplaceAll(expression, " ", "")
+
 	for len(remainingExpression) > 0 {
-		for key, value := range tokenMap {
+		for key, value := range tokenRegexMap {
 			regex, _ := regexp.Compile(value)
 			loc := regex.FindStringIndex(remainingExpression)
+
 			if len(loc) > 0 && loc[1] > 0 {
 				token := Token{tokenType: key, value: remainingExpression[loc[0]:loc[1]]}
 				tokens = append(tokens, token)
@@ -85,180 +70,92 @@ func tokenize(expression string) []Token {
 	return tokens
 }
 
-func evaluateExpression(expression string) int64 {
-	tokens := tokenize(expression)
-	operatorStack := make([]Token, 0)
-	valueStack := make([]int64, 0)
+func applyOperator(operator TokenType, left int, right int) int {
+	if operator == Plus {
+		return left + right
+	} else if operator == Multiply {
+		return left * right
+	}
+	return 0
+}
 
-	calcTop := func() {
+func evaluateExpression(expression string, precendence map[TokenType]int) int {
+	tokens := tokenize(expression)
+
+	// why don't you have generics Go...
+	operatorStack := make([]Token, 0)
+	valueStack := make([]int, 0)
+
+	applyOperators := func() {
 		operator := operatorStack[len(operatorStack)-1]
 		operatorStack = operatorStack[:len(operatorStack)-1]
-		val1, val2 := valueStack[len(valueStack)-2], valueStack[len(valueStack)-1]
-		valueStack = valueStack[:len(valueStack)-2]
-		if operator.tokenType == Plus {
-			valueStack = append(valueStack, val1+val2)
-		} else if operator.tokenType == Multiply {
-			valueStack = append(valueStack, val1*val2)
 
+		left, right := valueStack[len(valueStack)-2], valueStack[len(valueStack)-1]
+		valueStack = valueStack[:len(valueStack)-2]
+
+		valueStack = append(valueStack, applyOperator(operator.tokenType, left, right))
+	}
+
+	canApplyOperator := func(tokenType TokenType) bool {
+		if len(valueStack) < 1 || len(operatorStack) == 0 {
+			return false
 		}
+
+		lastOperator := operatorStack[len(operatorStack)-1].tokenType
+		if lastOperator != Plus && lastOperator != Multiply {
+			return false
+		}
+
+		return precendence[operatorStack[len(operatorStack)-1].tokenType] >= precendence[tokenType]
 	}
 
 	for _, token := range tokens {
 		switch token.tokenType {
 		case LeftParen:
-			println("left paren on stack")
-
 			operatorStack = append(operatorStack, token)
 		case Plus:
-			// for len(valueStack) > 1 && len(operatorStack) > 0 && (operatorStack[len(operatorStack)-1].tokenType == Plus || operatorStack[len(operatorStack)-1].tokenType == Multiply) {
-			// 	number := valueStack[len(valueStack)-1]
-			// 	left := valueStack[len(valueStack)-2]
-
-			// 	valueStack = valueStack[:len(valueStack)-2]
-
-			// 	operator := operatorStack[len(operatorStack)-1]
-
-			// 	if operator.tokenType == Multiply {
-			// 		operatorStack = operatorStack[:len(operatorStack)-1]
-
-			// 		valueStack = valueStack[:len(valueStack)-1]
-			// 		valueStack = append(valueStack, number*left)
-			// 		// println("evaluating", number, "*", left)
-
-			// 	} else if operator.tokenType == Plus {
-			// 		operatorStack = operatorStack[:len(operatorStack)-1]
-
-			// 		valueStack = valueStack[:len(valueStack)-1]
-			// 		valueStack = append(valueStack, number+left)
-			// 		// println("evaluating", number, "+", left)
-
-			// 	}
-			// }
+			for canApplyOperator(Plus) {
+				applyOperators()
+			}
 			operatorStack = append(operatorStack, token)
 		case Multiply:
-			// for len(valueStack) > 1 && len(operatorStack) > 0 && (operatorStack[len(operatorStack)-1].tokenType == Plus || operatorStack[len(operatorStack)-1].tokenType == Multiply) {
-			// 	number := valueStack[len(valueStack)-1]
-			// 	valueStack = valueStack[:len(valueStack)-1]
-
-			// 	operator := operatorStack[len(operatorStack)-1]
-
-			// 	if operator.tokenType == Multiply {
-			// 		operatorStack = operatorStack[:len(operatorStack)-1]
-
-			// 		left := valueStack[len(valueStack)-1]
-			// 		valueStack = valueStack[:len(valueStack)-1]
-			// 		valueStack = append(valueStack, number*left)
-			// 		// println("evaluating", number, "*", left)
-
-			// 	} else if operator.tokenType == Plus {
-			// 		operatorStack = operatorStack[:len(operatorStack)-1]
-
-			// 		left := valueStack[len(valueStack)-1]
-			// 		valueStack = valueStack[:len(valueStack)-1]
-			// 		valueStack = append(valueStack, number+left)
-			// 		// println("evaluating", number, "+", left)
-
-			// 	}
-			// }
+			for canApplyOperator(Multiply) {
+				applyOperators()
+			}
 			operatorStack = append(operatorStack, token)
 		case RightParen:
-			println("Right paren")
 			for len(operatorStack) > 0 && operatorStack[len(operatorStack)-1].tokenType != LeftParen {
-				operator := operatorStack[len(operatorStack)-1]
-				// println("OPERATOR FROM STACK", operator.value)
-				operatorStack = operatorStack[:len(operatorStack)-1]
-
-				left := valueStack[len(valueStack)-1]
-				right := valueStack[len(valueStack)-2]
-
-				valueStack = valueStack[:len(valueStack)-2]
-
-				if operator.tokenType == Multiply {
-					// println("evaluating", left, "*", right)
-					valueStack = append(valueStack, right*left)
-				} else if operator.tokenType == Plus {
-					// println("evaluating", left, "+", right)
-
-					valueStack = append(valueStack, right+left)
-				}
+				applyOperators()
 			}
-			for len(operatorStack) > 0 && operatorStack[len(operatorStack)-1].tokenType == LeftParen {
-				// println("LEFT PARAM STOPPINN")
-				operatorStack = operatorStack[:len(operatorStack)-1]
-			}
-
-			// for len(valueStack) > 1 && len(operatorStack) > 0 && (operatorStack[len(operatorStack)-1].tokenType == Plus || operatorStack[len(operatorStack)-1].tokenType == Multiply) {
-			// 	number := valueStack[len(valueStack)-1]
-			// 	valueStack = valueStack[:len(valueStack)-1]
-
-			// 	operator := operatorStack[len(operatorStack)-1]
-
-			// 	if operator.tokenType == Multiply {
-			// 		operatorStack = operatorStack[:len(operatorStack)-1]
-
-			// 		left := valueStack[len(valueStack)-1]
-			// 		valueStack = valueStack[:len(valueStack)-1]
-			// 		valueStack = append(valueStack, number*left)
-			// 		// println("evaluating", number, "*", left)
-
-			// 	} else if operator.tokenType == Plus {
-			// 		operatorStack = operatorStack[:len(operatorStack)-1]
-
-			// 		left := valueStack[len(valueStack)-1]
-			// 		valueStack = valueStack[:len(valueStack)-1]
-			// 		valueStack = append(valueStack, number+left)
-			// 		// println("evaluating", number, "+", left)
-
-			// 	}
-			// }
+			// Pop left parenthesis
+			operatorStack = operatorStack[:len(operatorStack)-1]
 		case Number:
-			numberS, _ := strconv.Atoi(token.value)
-			number := int64(numberS)
-			if len(operatorStack) == 0 {
-				valueStack = append(valueStack, number)
-			} else {
-				operator := operatorStack[len(operatorStack)-1]
-
-				if operator.tokenType == Multiply {
-					operatorStack = operatorStack[:len(operatorStack)-1]
-
-					left := valueStack[len(valueStack)-1]
-					valueStack = valueStack[:len(valueStack)-1]
-					valueStack = append(valueStack, number*left)
-					// println("evaluating", number, "*", left)
-
-				} else if operator.tokenType == Plus {
-					operatorStack = operatorStack[:len(operatorStack)-1]
-
-					left := valueStack[len(valueStack)-1]
-					valueStack = valueStack[:len(valueStack)-1]
-					valueStack = append(valueStack, number+left)
-					// println("evaluating", number, "+", left)
-
-				} else {
-					valueStack = append(valueStack, number)
-				}
-			}
+			number, _ := strconv.Atoi(token.value)
+			valueStack = append(valueStack, number)
 		}
 	}
 
-	for len(operatorStack) != 0 {
-		calcTop()
+	for len(operatorStack) > 0 {
+		applyOperators()
 	}
 
 	return valueStack[0]
 }
 
-func part1(lines []string) int64 {
+func sumResults(lines []string, precendence map[TokenType]int) int64 {
 	var sum int64 = 0
 	for _, line := range lines {
-		sum += evaluateExpression(line)
+		sum += int64(evaluateExpression(line, precendence))
 	}
 	return sum
 }
 
-func part2(lines []string) int {
-	return 0
+func part1(lines []string) int64 {
+	return sumResults(lines, map[TokenType]int{Plus: 1, Multiply: 1})
+}
+
+func part2(lines []string) int64 {
+	return sumResults(lines, map[TokenType]int{Plus: 2, Multiply: 1})
 }
 
 func main() {
